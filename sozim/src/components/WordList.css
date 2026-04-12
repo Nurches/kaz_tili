@@ -1,0 +1,88 @@
+.word-list-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.word-list-header {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1f2937;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.word-list-count {
+  font-size: 0.875rem;
+  font-weight: 400;
+  color: #6b7280;
+}
+
+.word-list-items {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.word-list-item {
+  background: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+  border: 1px solid #e5e7eb;
+  padding: 1rem;
+  transition: box-shadow 0.2s;
+}
+
+.word-list-item:hover {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.word-list-item-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.word-list-item-text {
+  flex: 1;
+  text-align: left;
+  font-size: 1.125rem;
+  font-weight: 500;
+  color: #1f2937;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: color 0.2s;
+  font-family: 'Segoe UI', 'Tahoma', 'Arial', sans-serif;
+}
+
+.word-list-item-text:hover {
+  color: var(--kazakh-blue);
+}
+
+.word-list-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 3rem 0;
+}
+
+.empty-state-icon {
+  color: #9ca3af;
+  margin-bottom: 1rem;
+}
+
+.empty-state-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #6b7280;
+  margin-bottom: 0.5rem;
+}
+
+.empty-state-text {
+  color: #9ca3af;
+}
