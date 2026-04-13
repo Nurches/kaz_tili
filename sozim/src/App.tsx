@@ -5,15 +5,16 @@ import SearchBar from "./components/SearchBar";
 import WordCard from "./components/WordCard";
 import WordList from "./components/WordList";
 import LoadingSpinner from "./components/LoadingSpinner";
+import HomePage from "./components/HomePage";
 import { WiktionaryService } from "./services/api";
 import { GeminiService } from "./services/gemini";
 import { WordDefinition } from "./types";
 import { Heart, Clock } from "lucide-react";
 
-type View = "search" | "history" | "favorites";
+type View = "home" | "search" | "history" | "favorites";
 
 const App: React.FC = () => {
-  const [currentView, setCurrentView] = useState<View>("search");
+  const [currentView, setCurrentView] = useState<View>("home");
   const [currentWord, setCurrentWord] = useState<WordDefinition | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -112,12 +113,17 @@ const App: React.FC = () => {
   return (
     <div className="app">
       <Header
+        onHomeClick={() => setCurrentView("home")}
         onSearchClick={() => setCurrentView("search")}
         onHistoryClick={() => setCurrentView("history")}
         onFavoritesClick={() => setCurrentView("favorites")}
       />
 
       <main className="container main-content">
+        {currentView === "home" && (
+          <HomePage onStartLearning={() => setCurrentView("search")} />
+        )}
+
         {currentView === "search" && (
           <div className="space-y-8">
             <div className="text-center">

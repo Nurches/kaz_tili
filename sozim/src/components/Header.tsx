@@ -1,13 +1,15 @@
 import React from "react";
-import { Search, BookOpen, Heart, History } from "lucide-react";
+import { Search, BookOpen, Heart, History, House } from "lucide-react";
 
 interface HeaderProps {
+  onHomeClick: () => void;
   onSearchClick: () => void;
   onHistoryClick: () => void;
   onFavoritesClick: () => void;
 }
 
 const Header: React.FC<HeaderProps> = ({
+  onHomeClick,
   onSearchClick,
   onHistoryClick,
   onFavoritesClick,
@@ -21,6 +23,11 @@ const Header: React.FC<HeaderProps> = ({
         </div>
 
         <nav className="header-nav">
+          <button onClick={onHomeClick} className="header-button">
+            <House className="w-5 h-5" />
+            <span>Басты бет</span>
+          </button>
+
           <button onClick={onSearchClick} className="header-button">
             <Search className="w-5 h-5" />
             <span>Іздеу</span>
