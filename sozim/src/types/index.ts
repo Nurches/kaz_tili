@@ -12,12 +12,24 @@ export interface WiktionaryResponse {
   };
 }
 
+export interface AIWordInsights {
+  kk: string;
+  ru: string;
+  examples: string[];
+  interpretations?: string[];
+  synonyms?: string[];
+  homonyms?: string[];
+  raw?: string;
+}
+
 export interface WordDefinition {
   word: string;
   definition: string;
   translations?: string[];
   examples?: string[];
   pronunciation?: string;
+  source?: "wiktionary" | "ai";
+  aiInsights?: AIWordInsights;
 }
 
 export interface SearchResult {

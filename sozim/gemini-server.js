@@ -21,14 +21,18 @@ const PORT = process.env.GEMINI_SERVER_PORT
   ? Number(process.env.GEMINI_SERVER_PORT)
   : 5001;
 
-const apiKey = process.env.GEMINI_API_KEY;
-if (!apiKey) {
+const geminiApiKey = process.env.GEMINI_API_KEY;
+const openAiApiKey = process.env.OPENAI_API_KEY;
+const OPENAI_MODEL = process.env.OPENAI_MODEL || "gpt-4o-mini";
+const OPENAI_MAX_TOKENS = 100;
+
+if (!openAiApiKey && !geminiApiKey) {
   console.error(
-    "Missing GEMINI_API_KEY. Add it to .env.local (recommended) or .env.",
+    "Missing OPENAI_API_KEY or GEMINI_API_KEY. Add at least one key to .env.local or .env.",
   );
 }
 
-const genAI = apiKey ? new GoogleGenerativeAI(apiKey) : null;
+const genAI = geminiApiKey ? new GoogleGenerativeAI(geminiApiKey) : null;
 
 const app = express();
 app.use(cors());
@@ -77,12 +81,76 @@ function extractJsonObject(rawText) {
   return null;
 }
 
+function buildPrompt(word, sourceDefinition = "") {
+  return (
+    "You are a bilingual Kazakh/Russian dictionary assistant. " +
+    "Analyze the given Kazakh word and consider multiple possible meanings, including proper name/person-name usage if relevant. " +
+    "Return ONLY valid JSON with this exact schema: " +
+    '{"kk":string,"ru":string,"examples":string[],"interpretations":string[],"synonyms":string[],"homonyms":string[]} . ' +
+    "Rules: 'kk' must be a short Kazakh explanation/definition. " +
+    "'ru' must be only a Russian translation or close equivalent of the word/meaning. " +
+    "examples must be 2-3 short Kazakh sentences using the word naturally. " +
+    "'interpretations' should list alternative senses/usages (for example: common noun, proper name, place, etc.) when applicable. " +
+    "'synonyms' should include close Kazakh synonyms if known, else empty array. " +
+    "'homonyms' should include homonym forms/meanings if known, else empty array. " +
+    "No markdown. No extra keys.\n\n" +
+    `Word: ${word}\n` +
+    (sourceDefinition
+      ? `Wiktionary definition (may be noisy): ${sourceDefinition}\n`
+      : "")
+  );
+}
+
+async function explainViaOpenAI(prompt) {
+  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${openAiApiKey}`,
+    },
+    body: JSON.stringify({
+      model: OPENAI_MODEL,
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.2,
+      max_tokens: OPENAI_MAX_TOKENS,
+      response_format: { type: "json_object" },
+    }),
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.text();
+    const err = new Error(
+      `OpenAI request failed: ${response.status}${errorBody ? ` - ${errorBody}` : ""}`,
+    );
+    err.status = response.status;
+    throw err;
+  }
+
+  const data = await response.json();
+  return String(data?.choices?.[0]?.message?.content || "");
+}
+
+async function explainViaGemini(prompt) {
+  const model = genAI.getGenerativeModel({
+    model: "gemini-2.5-flash",
+  });
+
+  const result = await model.generateContent({
+    contents: [{ role: "user", parts: [{ text: prompt }] }],
+    generationConfig: {
+      responseMimeType: "application/json",
+    },
+  });
+
+  return result.response.text();
+}
+
 app.post("/api/gemini/explain", async (req, res) => {
   try {
-    if (!genAI) {
+    if (!openAiApiKey && !genAI) {
       return res
         .status(500)
-        .json({ error: "GEMINI_API_KEY is not configured" });
+        .json({ error: "OPENAI_API_KEY or GEMINI_API_KEY is not configured" });
     }
 
     const word = String(req.body?.word || "").trim();
@@ -92,29 +160,12 @@ app.post("/api/gemini/explain", async (req, res) => {
       return res.status(400).json({ error: "word is required" });
     }
 
-    const model = genAI.getGenerativeModel({
-      model: "gemini-2.5-flash",
-    });
-
-    const prompt =
-      "You are a bilingual Kazakh/Russian dictionary assistant. " +
-      "Explain the given Kazakh word in simple language. " +
-      "Return ONLY valid JSON with this exact schema: " +
-      '{"kk":string,"ru":string,"examples":string[]} . ' +
-      "Rules: examples must be 2-3 short Kazakh sentences using the word naturally. " +
-      "No markdown. No extra keys.\n\n" +
-      `Word: ${word}\n` +
-      (sourceDefinition
-        ? `Wiktionary definition (may be noisy): ${sourceDefinition}\n`
-        : "");
-
-    const result = await model.generateContent({
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-      generationConfig: {
-        responseMimeType: "application/json",
-      },
-    });
-    const text = result.response.text();
+    const prompt = buildPrompt(word, sourceDefinition);
+    const provider = openAiApiKey ? "openai" : "gemini";
+    const text =
+      provider === "openai"
+        ? await explainViaOpenAI(prompt)
+        : await explainViaGemini(prompt);
 
     const parsed = extractJsonObject(text);
     if (!parsed || typeof parsed !== "object") {
@@ -131,14 +182,43 @@ app.post("/api/gemini/explain", async (req, res) => {
     const examples = Array.isArray(parsed.examples)
       ? parsed.examples.filter((x) => typeof x === "string")
       : [];
+    const interpretations = Array.isArray(parsed.interpretations)
+      ? parsed.interpretations.filter((x) => typeof x === "string")
+      : [];
+    const synonyms = Array.isArray(parsed.synonyms)
+      ? parsed.synonyms.filter((x) => typeof x === "string")
+      : [];
+    const homonyms = Array.isArray(parsed.homonyms)
+      ? parsed.homonyms.filter((x) => typeof x === "string")
+      : [];
 
-    return res.json({ kk, ru, examples });
+    return res.json({ kk, ru, examples, interpretations, synonyms, homonyms });
   } catch (error) {
-    console.error("Gemini error:", error);
-    return res.status(500).json({ error: "Gemini request failed" });
+    const status =
+      Number(error?.status) ||
+      Number(error?.response?.status) ||
+      Number(error?.cause?.status) ||
+      500;
+    const details =
+      error?.message ||
+      error?.response?.data?.error?.message ||
+      error?.cause?.message ||
+      "AI request failed";
+
+    console.error("AI error:", {
+      status,
+      message: details,
+      raw: error,
+    });
+
+    return res.status(status >= 400 && status < 600 ? status : 500).json({
+      error: "AI request failed",
+      details,
+      status,
+    });
   }
 });
 
 app.listen(PORT, () => {
-  console.log(`Gemini server listening on http://localhost:${PORT}`);
+  console.log(`AI server listening on http://localhost:${PORT}`);
 });

@@ -19,6 +19,25 @@ const WordCard: React.FC<WordCardProps> = ({
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
 
+  const normalizeText = (value: string) =>
+    value.trim().replace(/\s+/g, " ").toLowerCase();
+
+  const uniqueByNormalized = (items: string[]) => {
+    const seen = new Set<string>();
+    const result: string[] = [];
+
+    for (const item of items) {
+      const trimmed = item.trim();
+      if (!trimmed) continue;
+      const key = normalizeText(trimmed);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      result.push(trimmed);
+    }
+
+    return result;
+  };
+
   const handleExplainWithAI = useCallback(async () => {
     try {
       setAiLoading(true);
@@ -31,17 +50,45 @@ const WordCard: React.FC<WordCardProps> = ({
 
       setAiResult(result);
     } catch (_e) {
-      setAiError("Не удалось получить объяснение от AI");
+      setAiError("AI арқылы түсіндірме алу мүмкін болмады");
     } finally {
       setAiLoading(false);
     }
   }, [word.word, word.definition]);
 
   useEffect(() => {
-    setAiResult(null);
+    setAiResult(word.aiInsights ?? null);
     setAiError(null);
+    if (word.source === "ai" && word.aiInsights) {
+      return;
+    }
     void handleExplainWithAI();
-  }, [handleExplainWithAI]);
+  }, [handleExplainWithAI, word.aiInsights, word.source]);
+
+  const mergedTranslations = uniqueByNormalized([
+    ...(word.translations ?? []),
+    aiResult?.ru ?? "",
+  ]);
+  const mergedExamples = uniqueByNormalized([
+    ...(word.examples ?? []),
+    ...(aiResult?.examples ?? []),
+  ]);
+  const interpretations = uniqueByNormalized(aiResult?.interpretations ?? []);
+  const synonyms = uniqueByNormalized(aiResult?.synonyms ?? []);
+  const homonyms = uniqueByNormalized(aiResult?.homonyms ?? []);
+  const aiExtraDefinition =
+    aiResult?.kk &&
+    normalizeText(aiResult.kk) !== normalizeText(word.definition)
+      ? aiResult.kk
+      : "";
+  const showAiSection =
+    aiLoading ||
+    Boolean(aiError) ||
+    Boolean(aiExtraDefinition) ||
+    interpretations.length > 0 ||
+    synonyms.length > 0 ||
+    homonyms.length > 0 ||
+    Boolean(aiResult?.raw);
 
   const handlePronounce = () => {
     if ("speechSynthesis" in window) {
@@ -61,16 +108,16 @@ const WordCard: React.FC<WordCardProps> = ({
             <button
               onClick={handlePronounce}
               className="word-action-button"
-              title="Произнести"
+              title="Дыбыстау"
             >
               <Volume2 className="w-5 h-5" />
-              <span>Произнести</span>
+              <span>Дыбыстау</span>
             </button>
 
             <button
               onClick={handleExplainWithAI}
               className="word-action-button"
-              title="Объяснить через AI"
+              title="AI арқылы түсіндіру"
               disabled={aiLoading}
             >
               <span>{aiLoading ? "AI..." : "AI"}</span>
@@ -81,7 +128,7 @@ const WordCard: React.FC<WordCardProps> = ({
               target="_blank"
               rel="noopener noreferrer"
               className="word-action-button"
-              title="Открыть в Wiktionary"
+              title="Wiktionary-де ашу"
             >
               <ExternalLink className="w-4 h-4" />
               <span>Wiktionary</span>
@@ -92,7 +139,7 @@ const WordCard: React.FC<WordCardProps> = ({
         <button
           onClick={() => onFavorite(word.word)}
           className={`favorite-button ${isFavorite ? "active" : ""}`}
-          title={isFavorite ? "Убрать из избранного" : "Добавить в избранное"}
+          title={isFavorite ? "Таңдаулылардан алып тастау" : "Таңдаулыларға қосу"}
         >
           <Heart className={`w-5 h-5 ${isFavorite ? "fill-current" : ""}`} />
         </button>
@@ -100,29 +147,61 @@ const WordCard: React.FC<WordCardProps> = ({
 
       <div>
         <div className="word-section">
-          <h3 className="word-section-title">Определение</h3>
+          <h3 className="word-section-title">
+            {word.source === "ai" ? "Анықтама (AI)" : "Анықтама"}
+          </h3>
           <p className="word-definition">{word.definition}</p>
         </div>
 
-        {(aiLoading || aiError || aiResult) && (
+        {showAiSection && (
           <div className="word-section">
-            <h3 className="word-section-title">Объяснение AI</h3>
+            <h3 className="word-section-title">AI талдауы</h3>
             {aiLoading && (
-              <p className="word-definition">AI формирует объяснение...</p>
+              <p className="word-definition">AI түсіндірме дайындап жатыр...</p>
             )}
             {aiError && <p className="word-definition">{aiError}</p>}
             {aiResult && (
               <div>
-                {aiResult.kk && <p className="word-definition">{aiResult.kk}</p>}
-                {aiResult.ru && <p className="word-definition">{aiResult.ru}</p>}
+                {aiExtraDefinition && (
+                  <p className="word-definition">{aiExtraDefinition}</p>
+                )}
 
-                {aiResult.examples && aiResult.examples.length > 0 && (
-                  <div className="examples">
-                    {aiResult.examples.map((example, index) => (
-                      <div key={index} className="example">
-                        <p className="example-text">{example}</p>
-                      </div>
-                    ))}
+                {interpretations.length > 0 && (
+                  <div className="word-section">
+                    <h3 className="word-section-title">Басқа мағыналар</h3>
+                    <div className="examples">
+                      {interpretations.map((value, index) => (
+                        <div key={index} className="example">
+                          <p className="example-text">{value}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {synonyms.length > 0 && (
+                  <div className="word-section">
+                    <h3 className="word-section-title">Синонимдер</h3>
+                    <div className="translations">
+                      {synonyms.map((value, index) => (
+                        <span key={index} className="translation-badge">
+                          {value}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {homonyms.length > 0 && (
+                  <div className="word-section">
+                    <h3 className="word-section-title">Омонимдер</h3>
+                    <div className="translations">
+                      {homonyms.map((value, index) => (
+                        <span key={index} className="translation-badge">
+                          {value}
+                        </span>
+                      ))}
+                    </div>
                   </div>
                 )}
 
@@ -132,11 +211,11 @@ const WordCard: React.FC<WordCardProps> = ({
           </div>
         )}
 
-        {word.translations && word.translations.length > 0 && (
+        {mergedTranslations.length > 0 && (
           <div className="word-section">
-            <h3 className="word-section-title">Переводы</h3>
+            <h3 className="word-section-title">Аудармалар</h3>
             <div className="translations">
-              {word.translations.map((translation, index) => (
+              {mergedTranslations.map((translation, index) => (
                 <span key={index} className="translation-badge">
                   {translation}
                 </span>
@@ -145,11 +224,11 @@ const WordCard: React.FC<WordCardProps> = ({
           </div>
         )}
 
-        {word.examples && word.examples.length > 0 && (
+        {mergedExamples.length > 0 && (
           <div className="word-section">
-            <h3 className="word-section-title">Примеры</h3>
+            <h3 className="word-section-title">Мысалдар</h3>
             <div className="examples">
-              {word.examples.map((example, index) => (
+              {mergedExamples.map((example, index) => (
                 <div key={index} className="example">
                   <p className="example-text">{example}</p>
                 </div>

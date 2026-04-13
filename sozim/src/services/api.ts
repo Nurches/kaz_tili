@@ -135,6 +135,7 @@ export class WiktionaryService {
       definition: definition || "Анықтама табылмады",
       translations,
       examples,
+      source: "wiktionary" as const,
     };
 
     console.log("Final parsed result:", result);

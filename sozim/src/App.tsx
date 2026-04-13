@@ -6,6 +6,7 @@ import WordCard from "./components/WordCard";
 import WordList from "./components/WordList";
 import LoadingSpinner from "./components/LoadingSpinner";
 import { WiktionaryService } from "./services/api";
+import { GeminiService } from "./services/gemini";
 import { WordDefinition } from "./types";
 import { Heart, Clock } from "lucide-react";
 
@@ -55,7 +56,33 @@ const App: React.FC = () => {
           setSearchHistory((prev) => [word, ...prev.slice(0, 19)]);
         }
       } else {
-        setError("«" + word + "» сөзі табылмады");
+        const aiFallback = await GeminiService.explainWord({ word });
+        const hasAiContent =
+          Boolean(aiFallback.kk.trim()) ||
+          Boolean(aiFallback.ru.trim()) ||
+          aiFallback.examples.length > 0;
+
+        if (hasAiContent) {
+          const aiWord: WordDefinition = {
+            word,
+            definition:
+              aiFallback.kk.trim() ||
+              "Wiktionary-ден табылмады. AI арқылы жасалған қысқаша түсіндірме.",
+            translations: aiFallback.ru.trim() ? [aiFallback.ru.trim()] : [],
+            examples: aiFallback.examples,
+            source: "ai",
+            aiInsights: aiFallback,
+          };
+
+          setCurrentWord(aiWord);
+          setCurrentView("search");
+
+          if (!searchHistory.includes(word)) {
+            setSearchHistory((prev) => [word, ...prev.slice(0, 19)]);
+          }
+        } else {
+          setError("«" + word + "» сөзі табылмады");
+        }
       }
     } catch (err) {
       setError("Сөзді іздеу кезінде қате орын алды");

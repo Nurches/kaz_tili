@@ -15,14 +15,16 @@ The app uses:
 
 - Frontend call: `POST /api/gemini/explain`
 - Local backend: `gemini-server.js` (Express)
-- Gemini model: `gemini-2.5-flash`
+- Provider priority: `OpenAI (OPENAI_API_KEY)` -> `Gemini (GEMINI_API_KEY)`
+- OpenAI default model: `gpt-4o-mini` (`max_tokens: 100`)
+- Gemini fallback model: `gemini-2.5-flash`
 
 Backend enforces a strict JSON shape:
 
 ```json
 {
   "kk": "Kazakh explanation",
-  "ru": "Russian explanation",
+  "ru": "Russian translation",
   "examples": ["...", "..."]
 }
 ```
@@ -38,12 +40,11 @@ npm install
 2. Create `.env.local` (or copy from `.env.example`) and set your key:
 
 ```env
+OPENAI_API_KEY=YOUR_OPENAI_KEY
+OPENAI_MODEL=gpt-4o-mini
 GEMINI_API_KEY=YOUR_GEMINI_KEY
-REACT_APP_GEMINI_API_KEY=YOUR_GEMINI_KEY
 GEMINI_SERVER_PORT=5001
 ```
-
-`REACT_APP_GEMINI_API_KEY` is used as an automatic browser fallback when local Node backend cannot reach Gemini (for example, proxy/corporate-network issues).
 
 ## Run
 
