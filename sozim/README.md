@@ -1,46 +1,65 @@
-# Getting Started with Create React App
+# Sozim
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+Kazakh dictionary app with AI explanations for words.
 
-## Available Scripts
+## What Is Implemented
 
-In the project directory, you can run:
+- Search Kazakh words from `kk.wiktionary.org`
+- Get AI explanation for each found word (Kazakh + Russian + examples)
+- Save search history and favorites in local storage
+- Voice pronunciation (`speechSynthesis`)
 
-### `npm start`
+## AI Integration (Gemini)
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+The app uses:
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+- Frontend call: `POST /api/gemini/explain`
+- Local backend: `gemini-server.js` (Express)
+- Gemini model: `gemini-2.5-flash`
 
-### `npm test`
+Backend enforces a strict JSON shape:
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+```json
+{
+  "kk": "Kazakh explanation",
+  "ru": "Russian explanation",
+  "examples": ["...", "..."]
+}
+```
 
-### `npm run build`
+## Setup
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+1. Install dependencies:
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+```bash
+npm install
+```
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+2. Create `.env.local` (or copy from `.env.example`) and set your key:
 
-### `npm run eject`
+```env
+GEMINI_API_KEY=YOUR_GEMINI_KEY
+REACT_APP_GEMINI_API_KEY=YOUR_GEMINI_KEY
+GEMINI_SERVER_PORT=5001
+```
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+`REACT_APP_GEMINI_API_KEY` is used as an automatic browser fallback when local Node backend cannot reach Gemini (for example, proxy/corporate-network issues).
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+## Run
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+Run both backend + frontend together:
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+```bash
+npm run start:dev
+```
 
-## Learn More
+- Web: `http://localhost:3001`
+- API: `http://localhost:5001/api/health`
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+## Scripts
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+- `npm run start:server` - start Gemini backend only
+- `npm run start:web` - start React app only
+- `npm run start:dev` - start both
+- `npm run build` - production build
+- `npm test` - tests

@@ -6,12 +6,8 @@ export class WiktionaryService {
   static async searchWord(word: string): Promise<WordDefinition | null> {
     try {
       // Try both original case and lowercase version
-      const searchTerms = [
-        word,
-        word.toLowerCase(),
-        word.charAt(0).toUpperCase() + word.slice(1).toLowerCase(),
-      ];
-
+      const searchTerms = [word, word.toLowerCase(), word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()];
+      
       for (const searchTerm of searchTerms) {
         const encodedWord = encodeURIComponent(searchTerm);
         const url = `${WIKTIONARY_API_URL}?action=query&titles=${encodedWord}&prop=extracts&format=json&explaintext=1&origin=*`;
@@ -27,7 +23,7 @@ export class WiktionaryService {
           return this.parseWordDefinition(page.title, page.extract || "");
         }
       }
-
+      
       return null;
     } catch (error) {
       console.error("Error fetching word definition:", error);
@@ -48,8 +44,6 @@ export class WiktionaryService {
     let currentSection = "";
 
     for (const line of lines) {
-      const trimmedLine = line.trim();
-
       if (
         line.includes("=== Зат есім ===") ||
         line.includes("=== Сын есім ===") ||
@@ -70,46 +64,22 @@ export class WiktionaryService {
         continue;
       }
 
-      // Check for definition markers
-      if (
-        currentSection === "definition" &&
-        (line.includes("Анықтамасы:") ||
-          line.includes("Анықтама:") ||
-          line.includes("Анықтамасы") ||
-          line.includes("Анықтама"))
-      ) {
-        // Start collecting definition after the marker
-        definition = trimmedLine
-          .replace(/Анықтамасы\s*:\s*/i, "")
-          .replace(/Анықтама\s*:\s*/i, "")
-          .trim();
-      } else if (
-        currentSection === "definition" &&
-        !definition &&
-        trimmedLine &&
-        /^\d+\.|^#|^\*/.test(trimmedLine)
-      ) {
-        definition = trimmedLine
-          .replace(/^\d+\.\s*/, "")
-          .replace(/^([#*])\s*/, "")
-          .trim();
+      // Fixed: Look for both "Анықтамасы:" and "Анықтамасы:"
+      if (currentSection === "definition" && (line.includes("Анықтамасы:") || line.includes("Анықтамасы:"))) {
+        definition = line.replace(/Анықтамасы:\s*/, "").trim();
       } else if (
         currentSection === "definition" &&
         definition &&
-        trimmedLine &&
-        !trimmedLine.startsWith("===") &&
-        !line.includes("Аудармалары:") &&
-        !line.includes("Анықтамасы:") &&
-        !line.includes("Анықтама:")
-      ) {
-        // Continue adding to definition
-        definition += " " + trimmedLine;
-      } else if (
-        currentSection === "translations" &&
-        trimmedLine &&
+        line.trim() &&
         !line.includes("Аудармалары:")
       ) {
-        const match = trimmedLine.match(/^([^:]+):\s*(.+)$/);
+        definition += " " + line.trim();
+      } else if (
+        currentSection === "translations" &&
+        line.trim() &&
+        !line.includes("Аудармалары:")
+      ) {
+        const match = line.match(/^([^:]+):\s*(.+)$/);
         if (match) {
           const [, language, translation] = match;
           if (
@@ -126,18 +96,15 @@ export class WiktionaryService {
           }
         }
       } else if (currentSection === "examples" && line.trim()) {
-        examples.push(trimmedLine);
+        examples.push(line.trim());
       }
     }
 
-    const result = {
+    return {
       word,
       definition: definition || "Анықтама табылмады",
       translations,
       examples,
     };
-
-    console.log("Final parsed result:", result);
-    return result;
   }
 }

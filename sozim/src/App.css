@@ -185,6 +185,7 @@
 .word-definition {
   color: #6b7280;
   line-height: 1.625;
+  font-weight: 500;
 }
 
 .translations {
