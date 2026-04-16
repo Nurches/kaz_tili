@@ -15,6 +15,7 @@ The app uses:
 
 - Frontend call: `POST /api/ai/explain`
 - Local backend: `gemini-server.js` (Express)
+- Vercel backend: `api/ai/explain.js` (Serverless Function)
 - OpenAI model: `gpt-4o-mini` (`max_tokens: 100`)
 
 Backend enforces a strict JSON shape:
@@ -53,6 +54,7 @@ npm run start:dev
 
 - Web: `http://localhost:3001`
 - API: `http://localhost:5001/api/health`
+- Vercel health: `https://<your-domain>/api/health`
 
 ## Scripts
 
