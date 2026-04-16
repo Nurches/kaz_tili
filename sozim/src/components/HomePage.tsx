@@ -38,7 +38,7 @@ const HomePage: React.FC<HomePageProps> = ({ onStartLearning }) => {
           <p className="home-kicker">Қазақ тіліне құрмет</p>
           <h2 className="home-title">Көне сөзді таны, тілді терең түсін</h2>
           <p className="home-subtitle">
-            «Сөзім» платформасының миссиясы: адамдарға қазақ тілін көне, терең
+            «Sozim» платформасының миссиясы: адамдарға қазақ тілін көне, терең
             және сирек сөздер арқылы үйрету.
           </p>
 

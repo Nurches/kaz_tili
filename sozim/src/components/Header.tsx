@@ -1,5 +1,5 @@
 import React from "react";
-import { Search, BookOpen, Heart, History, House } from "lucide-react";
+import { Search, Heart, History, House } from "lucide-react";
 
 interface HeaderProps {
   onHomeClick: () => void;
@@ -18,8 +18,8 @@ const Header: React.FC<HeaderProps> = ({
     <header className="header">
       <div className="container header-content">
         <div className="header-title">
-          <BookOpen className="w-8 h-8" />
-          <h1>Сөзім</h1>
+          <img src="/logosozim.png" alt="Sozim логотипі" className="header-logo" />
+          <h1>Sozim</h1>
         </div>
 
         <nav className="header-nav">
