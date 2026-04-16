@@ -9,14 +9,15 @@ Kazakh dictionary app with AI explanations for words.
 - Save search history and favorites in local storage
 - Voice pronunciation (`speechSynthesis`)
 
-## AI Integration (OpenAI)
+## AI Integration (OpenRouter)
 
 The app uses:
 
 - Frontend call: `POST /api/ai/explain`
 - Local backend: `gemini-server.js` (Express)
 - Vercel backend: `api/ai/explain.js` (Serverless Function)
-- OpenAI model: `gpt-4o-mini` (`max_tokens: 100`)
+- OpenRouter API: `https://openrouter.ai/api/v1/chat/completions`
+- OpenRouter model: `openai/gpt-4o-mini` (`max_tokens: 100`)
 
 Backend enforces a strict JSON shape:
 
@@ -39,8 +40,10 @@ npm install
 2. Create `.env.local` (or copy from `.env.example`) and set your key:
 
 ```env
-OPENAI_API_KEY=YOUR_OPENAI_KEY
-OPENAI_MODEL=gpt-4o-mini
+OPENROUTER_API_KEY=YOUR_OPENROUTER_KEY
+OPENROUTER_MODEL=openai/gpt-4o-mini
+OPENROUTER_SITE_URL=http://localhost:3001
+OPENROUTER_APP_NAME=Sozim
 AI_SERVER_PORT=5001
 ```
 

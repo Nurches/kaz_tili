@@ -22,13 +22,15 @@ const PORT = process.env.AI_SERVER_PORT
     ? Number(process.env.GEMINI_SERVER_PORT)
   : 5001;
 
-const openAiApiKey = process.env.OPENAI_API_KEY;
-const OPENAI_MODEL = process.env.OPENAI_MODEL || "gpt-4o-mini";
-const OPENAI_MAX_TOKENS = 100;
+const openRouterApiKey = process.env.OPENROUTER_API_KEY;
+const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL || "openai/gpt-4o-mini";
+const OPENROUTER_MAX_TOKENS = 100;
+const OPENROUTER_SITE_URL = process.env.OPENROUTER_SITE_URL || "http://localhost:3001";
+const OPENROUTER_APP_NAME = process.env.OPENROUTER_APP_NAME || "Sozim";
 
-if (!openAiApiKey) {
+if (!openRouterApiKey) {
   console.error(
-    "Missing OPENAI_API_KEY. Add it to .env.local or .env.",
+    "Missing OPENROUTER_API_KEY. Add it to .env.local or .env.",
   );
 }
 
@@ -99,18 +101,20 @@ function buildPrompt(word, sourceDefinition = "") {
   );
 }
 
-async function explainViaOpenAI(prompt) {
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+async function explainViaOpenRouter(prompt) {
+  const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${openAiApiKey}`,
+      Authorization: `Bearer ${openRouterApiKey}`,
+      "HTTP-Referer": OPENROUTER_SITE_URL,
+      "X-Title": OPENROUTER_APP_NAME,
     },
     body: JSON.stringify({
-      model: OPENAI_MODEL,
+      model: OPENROUTER_MODEL,
       messages: [{ role: "user", content: prompt }],
       temperature: 0.2,
-      max_tokens: OPENAI_MAX_TOKENS,
+      max_tokens: OPENROUTER_MAX_TOKENS,
       response_format: { type: "json_object" },
     }),
   });
@@ -118,7 +122,7 @@ async function explainViaOpenAI(prompt) {
   if (!response.ok) {
     const errorBody = await response.text();
     const err = new Error(
-      `OpenAI request failed: ${response.status}${errorBody ? ` - ${errorBody}` : ""}`,
+      `OpenRouter request failed: ${response.status}${errorBody ? ` - ${errorBody}` : ""}`,
     );
     err.status = response.status;
     throw err;
@@ -130,10 +134,10 @@ async function explainViaOpenAI(prompt) {
 
 async function handleExplain(req, res) {
   try {
-    if (!openAiApiKey) {
+    if (!openRouterApiKey) {
       return res
         .status(500)
-        .json({ error: "OPENAI_API_KEY is not configured" });
+        .json({ error: "OPENROUTER_API_KEY is not configured" });
     }
 
     const word = String(req.body?.word || "").trim();
@@ -144,7 +148,7 @@ async function handleExplain(req, res) {
     }
 
     const prompt = buildPrompt(word, sourceDefinition);
-    const text = await explainViaOpenAI(prompt);
+    const text = await explainViaOpenRouter(prompt);
 
     const parsed = extractJsonObject(text);
     if (!parsed || typeof parsed !== "object") {

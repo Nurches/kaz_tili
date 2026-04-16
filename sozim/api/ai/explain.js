@@ -58,12 +58,16 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    const openAiApiKey = process.env.OPENAI_API_KEY;
-    const OPENAI_MODEL = process.env.OPENAI_MODEL || "gpt-4o-mini";
-    const OPENAI_MAX_TOKENS = 100;
+    const openRouterApiKey = process.env.OPENROUTER_API_KEY;
+    const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL || "openai/gpt-4o-mini";
+    const OPENROUTER_MAX_TOKENS = 100;
+    const OPENROUTER_SITE_URL =
+      process.env.OPENROUTER_SITE_URL ||
+      `${req.headers["x-forwarded-proto"] || "https"}://${req.headers.host || "localhost"}`;
+    const OPENROUTER_APP_NAME = process.env.OPENROUTER_APP_NAME || "Sozim";
 
-    if (!openAiApiKey) {
-      return res.status(500).json({ error: "OPENAI_API_KEY is not configured" });
+    if (!openRouterApiKey) {
+      return res.status(500).json({ error: "OPENROUTER_API_KEY is not configured" });
     }
 
     const body =
@@ -79,17 +83,19 @@ module.exports = async function handler(req, res) {
     }
 
     const prompt = buildPrompt(word, sourceDefinition);
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${openAiApiKey}`,
+        Authorization: `Bearer ${openRouterApiKey}`,
+        "HTTP-Referer": OPENROUTER_SITE_URL,
+        "X-Title": OPENROUTER_APP_NAME,
       },
       body: JSON.stringify({
-        model: OPENAI_MODEL,
+        model: OPENROUTER_MODEL,
         messages: [{ role: "user", content: prompt }],
         temperature: 0.2,
-        max_tokens: OPENAI_MAX_TOKENS,
+        max_tokens: OPENROUTER_MAX_TOKENS,
         response_format: { type: "json_object" },
       }),
     });
@@ -98,7 +104,7 @@ module.exports = async function handler(req, res) {
       const errorBody = await response.text();
       return res.status(response.status).json({
         error: "AI request failed",
-        details: `OpenAI request failed: ${response.status}${errorBody ? ` - ${errorBody}` : ""}`,
+        details: `OpenRouter request failed: ${response.status}${errorBody ? ` - ${errorBody}` : ""}`,
         status: response.status,
       });
     }
