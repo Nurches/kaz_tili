@@ -4,7 +4,6 @@ const path = require("path");
 const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
-const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 const envLocalPath = path.resolve(process.cwd(), ".env.local");
 const envPath = path.resolve(process.cwd(), ".env");
@@ -17,22 +16,21 @@ if (fs.existsSync(envLocalPath)) {
   dotenv.config();
 }
 
-const PORT = process.env.GEMINI_SERVER_PORT
-  ? Number(process.env.GEMINI_SERVER_PORT)
+const PORT = process.env.AI_SERVER_PORT
+  ? Number(process.env.AI_SERVER_PORT)
+  : process.env.GEMINI_SERVER_PORT
+    ? Number(process.env.GEMINI_SERVER_PORT)
   : 5001;
 
-const geminiApiKey = process.env.GEMINI_API_KEY;
 const openAiApiKey = process.env.OPENAI_API_KEY;
 const OPENAI_MODEL = process.env.OPENAI_MODEL || "gpt-4o-mini";
 const OPENAI_MAX_TOKENS = 100;
 
-if (!openAiApiKey && !geminiApiKey) {
+if (!openAiApiKey) {
   console.error(
-    "Missing OPENAI_API_KEY or GEMINI_API_KEY. Add at least one key to .env.local or .env.",
+    "Missing OPENAI_API_KEY. Add it to .env.local or .env.",
   );
 }
-
-const genAI = geminiApiKey ? new GoogleGenerativeAI(geminiApiKey) : null;
 
 const app = express();
 app.use(cors());
@@ -130,27 +128,12 @@ async function explainViaOpenAI(prompt) {
   return String(data?.choices?.[0]?.message?.content || "");
 }
 
-async function explainViaGemini(prompt) {
-  const model = genAI.getGenerativeModel({
-    model: "gemini-2.5-flash",
-  });
-
-  const result = await model.generateContent({
-    contents: [{ role: "user", parts: [{ text: prompt }] }],
-    generationConfig: {
-      responseMimeType: "application/json",
-    },
-  });
-
-  return result.response.text();
-}
-
-app.post("/api/gemini/explain", async (req, res) => {
+async function handleExplain(req, res) {
   try {
-    if (!openAiApiKey && !genAI) {
+    if (!openAiApiKey) {
       return res
         .status(500)
-        .json({ error: "OPENAI_API_KEY or GEMINI_API_KEY is not configured" });
+        .json({ error: "OPENAI_API_KEY is not configured" });
     }
 
     const word = String(req.body?.word || "").trim();
@@ -161,11 +144,7 @@ app.post("/api/gemini/explain", async (req, res) => {
     }
 
     const prompt = buildPrompt(word, sourceDefinition);
-    const provider = openAiApiKey ? "openai" : "gemini";
-    const text =
-      provider === "openai"
-        ? await explainViaOpenAI(prompt)
-        : await explainViaGemini(prompt);
+    const text = await explainViaOpenAI(prompt);
 
     const parsed = extractJsonObject(text);
     if (!parsed || typeof parsed !== "object") {
@@ -217,7 +196,11 @@ app.post("/api/gemini/explain", async (req, res) => {
       status,
     });
   }
-});
+}
+
+app.post("/api/ai/explain", handleExplain);
+app.post("/api/gemini/explain", handleExplain);
+app.post("/ai/explain", handleExplain);
 
 app.listen(PORT, () => {
   console.log(`AI server listening on http://localhost:${PORT}`);

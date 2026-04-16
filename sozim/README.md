@@ -9,15 +9,13 @@ Kazakh dictionary app with AI explanations for words.
 - Save search history and favorites in local storage
 - Voice pronunciation (`speechSynthesis`)
 
-## AI Integration (Gemini)
+## AI Integration (OpenAI)
 
 The app uses:
 
-- Frontend call: `POST /api/gemini/explain`
+- Frontend call: `POST /api/ai/explain`
 - Local backend: `gemini-server.js` (Express)
-- Provider priority: `OpenAI (OPENAI_API_KEY)` -> `Gemini (GEMINI_API_KEY)`
-- OpenAI default model: `gpt-4o-mini` (`max_tokens: 100`)
-- Gemini fallback model: `gemini-2.5-flash`
+- OpenAI model: `gpt-4o-mini` (`max_tokens: 100`)
 
 Backend enforces a strict JSON shape:
 
@@ -42,8 +40,7 @@ npm install
 ```env
 OPENAI_API_KEY=YOUR_OPENAI_KEY
 OPENAI_MODEL=gpt-4o-mini
-GEMINI_API_KEY=YOUR_GEMINI_KEY
-GEMINI_SERVER_PORT=5001
+AI_SERVER_PORT=5001
 ```
 
 ## Run
@@ -59,7 +56,7 @@ npm run start:dev
 
 ## Scripts
 
-- `npm run start:server` - start Gemini backend only
+- `npm run start:server` - start AI backend only
 - `npm run start:web` - start React app only
 - `npm run start:dev` - start both
 - `npm run build` - production build

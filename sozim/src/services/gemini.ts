@@ -2,8 +2,8 @@ import { AIWordInsights } from "../types";
 
 export type GeminiExplainResponse = AIWordInsights;
 
-const GEMINI_PROXY_ENDPOINT = "/api/gemini/explain";
-const GEMINI_LOCAL_ENDPOINT = "http://localhost:5001/api/gemini/explain";
+const AI_PROXY_ENDPOINT = "/api/ai/explain";
+const AI_LOCAL_ENDPOINT = "http://localhost:5001/api/ai/explain";
 
 function extractJsonObject(rawText: string): Record<string, unknown> | null {
   if (!rawText) return null;
@@ -81,13 +81,13 @@ export class GeminiService {
   }): Promise<GeminiExplainResponse> {
     let response: Response;
     try {
-      response = await this.postExplain(GEMINI_PROXY_ENDPOINT, params);
+      response = await this.postExplain(AI_PROXY_ENDPOINT, params);
     } catch (_err) {
-      response = await this.postExplain(GEMINI_LOCAL_ENDPOINT, params);
+      response = await this.postExplain(AI_LOCAL_ENDPOINT, params);
     }
 
     if (response.status === 404) {
-      response = await this.postExplain(GEMINI_LOCAL_ENDPOINT, params);
+      response = await this.postExplain(AI_LOCAL_ENDPOINT, params);
     }
 
     if (!response.ok) {
